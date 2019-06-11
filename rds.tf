@@ -1,0 +1,52 @@
+provider "aws" {
+  version = "~> 2.14"
+  region     = "us-east-1"
+}
+
+terraform {
+  backend "remote" {
+    organization = "graemeDev"
+
+    workspaces {
+      name = "Dev-QA"
+    }
+  }
+}
+
+variable "db_password" {}
+
+resource "aws_db_instance" "terraform_RDS_instance" {
+  allocated_storage    = 20
+  storage_type         = "gp2"
+  engine               = "mysql"
+  engine_version       = "5.7"
+  instance_class       = "db.t2.micro"
+  name                 = "terraformRdsInstance"
+  username             = "admin"
+  password             = var.db_password
+  parameter_group_name = "default.mysql5.7"
+  vpc_security_group_ids = [aws_security_group.db_all_access.id]
+  publicly_accessible = true
+  skip_final_snapshot = true
+  final_snapshot_identifier = "finalSnapshot"
+}
+
+output "dbEndpoint" {
+  value = aws_db_instance.terraform_RDS_instance.endpoint
+}
+
+output "dbUsername" {
+  value = aws_db_instance.terraform_RDS_instance.username
+}
+
+resource "aws_security_group" "db_all_access" {
+  name        = "db_all_access"
+  description = "DB access from ANYWHERE. This should be locked down if actually using this."
+
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
